@@ -1,0 +1,1 @@
+CREATE INDEX idx_advertisement_end_at ON advertisement(end_at);

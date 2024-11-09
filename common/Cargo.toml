@@ -1,0 +1,15 @@
+[package]
+name = "common"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+isocountry = "0.3.2"
+
+[dependencies.chrono]
+workspace = true
+features = ["serde"]
+
+[dependencies.serde]
+workspace = true
+features = ["derive"]

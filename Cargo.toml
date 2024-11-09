@@ -1,0 +1,9 @@
+[workspace]
+members = ["backend", "balancer", "common"]
+
+
+[workspace.dependencies]
+axum = "0.7.7"
+tokio = "1.41.0"
+chrono = "0.4.38"
+serde = "1.0.214"

@@ -1,0 +1,24 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+quick_cache = "0.6.9"
+common = { path = "../common" }
+axum = { workspace = true, features = ["macros"]}
+tokio-postgres = "0.7.12"
+bb8-postgres = "0.8.1"
+bb8 = "0.8.6"
+
+[dependencies.chrono]
+workspace = true
+features = ["serde"]
+
+[dependencies.serde]
+workspace = true
+features = ["derive"]
+
+[dependencies.tokio]
+workspace = true
+features = ["rt-multi-thread", "macros", "fs"]
