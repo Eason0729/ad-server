@@ -25,7 +25,7 @@ impl Default for Config {
             host: "localhost".to_string(),
             port: 5432,
             user: "postgres".to_string(),
-            password: "password".to_string(),
+            password: "postgres".to_string(),
             db: "postgres".to_string(),
         }
     }
@@ -62,8 +62,7 @@ impl PreparedClient {
                 &self.queries.insert_stmt,
                 &[
                     &advertisement.title,
-                    &advertisement.age_range.0,
-                    &advertisement.age_range.1,
+                    &format!("int8range({},{})",advertisement.age_range.0, advertisement.age_range.1),
                     &advertisement
                         .country
                         .clone()
@@ -157,10 +156,10 @@ struct Queries {
 impl Queries {
     pub async fn new(pool: &Pool<Manager>) -> Result<Self, tokio_postgres::Error> {
         let conn = pool.get().await.expect("Failed to get connection");
-        let insert_stmt = conn.prepare("INSERT INTO advertisements (title, age_range, country, platform, end_at) VALUES ($1, int4range($2, $3), $4, $5, $6)").await?;
+        let insert_stmt = conn.prepare("INSERT INTO advertisement (title, age_range, country, platform, end_at) VALUES ($1, $2, $3, $4, $5)").await?;
         let mut query_stmt = std::array::from_fn(|_| None);
         for i in 0..1 << 4 {
-            let mut query = "SELECT id, title, end_at FROM advertisements".to_string();
+            let mut query = "SELECT id, title, end_at FROM advertisement".to_string();
             let mut filters = Vec::new();
             let mut n = 1;
 
@@ -170,9 +169,11 @@ impl Queries {
             }
             if i & 2 != 0 {
                 filters.push(format!("platform = ${}", n));
+                n += 1;
             }
             if i & 4 != 0 {
                 filters.push(format!("age_range @> ${}", n));
+                n += 1;
             }
             if i & 8 != 0 {
                 filters.push("end_at > now()".to_string());
@@ -181,7 +182,7 @@ impl Queries {
                 query.push_str(" WHERE ");
                 query.push_str(&filters.join(" AND "));
             }
-            query.push_str("ORDER BY id LIMIT $7, $8");
+            query.push_str(format!(" ORDER BY id LIMIT ${} OFFSET ${}", n, n + 1).as_str());
             query_stmt[i] = Some(conn.prepare(&query).await?);
         }
         let query_stmt = query_stmt.map(|stmt| stmt.unwrap());
