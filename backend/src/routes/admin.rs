@@ -1,4 +1,4 @@
-use crate::{advertisement::Advertisement as AdvertisementModel, routes::AppState};
+use crate::{database::Advertisement as AdvertisementModel, routes::AppState};
 use axum::{extract::State, http::StatusCode, Json};
 use common::{Country, Gender, Platform};
 use serde::Deserialize;

@@ -1,6 +1,5 @@
-mod advertisement;
+mod database;
 mod routes;
-// mod database;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

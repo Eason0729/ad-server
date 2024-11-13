@@ -3,20 +3,18 @@ mod ad;
 mod admin;
 mod health;
 
-use crate::advertisement::PreparedClient;
+use crate::database::Client;
 use axum::{routing, Router};
 use std::sync::Arc;
 
 struct AppState {
-    pub client: PreparedClient,
+    pub client: Client,
 }
 
 impl AppState {
     async fn new() -> Self {
         Self {
-            client: PreparedClient::new_with_config(Default::default())
-                .await
-                .unwrap(),
+            client: Client::new().await,
         }
     }
     async fn shared() -> Arc<Self> {

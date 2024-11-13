@@ -1,4 +1,4 @@
-use crate::{advertisement::Condition, routes::AppState};
+use crate::{database::*, routes::AppState};
 use axum::{extract::State, http::StatusCode, Json};
 use chrono::NaiveDateTime;
 use common::{Country, Gender, Platform};
@@ -11,9 +11,13 @@ pub struct Params {
     offset: usize,
     #[serde(default)]
     limit: usize,
+    #[serde(default)]
     age: Option<i32>,
+    #[serde(default)]
     country: Option<Country>,
+    #[serde(default)]
     platform: Option<Platform>,
+    #[serde(default)]
     gender: Option<Gender>,
 }
 
@@ -31,7 +35,7 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Json(params): Json<Params>,
 ) -> Result<Json<PartialAdvertisements>, StatusCode> {
-    if (params.limit == 0) {
+    if params.limit == 0 {
         return Ok(Json(PartialAdvertisements::default()));
     }
 
@@ -49,13 +53,17 @@ pub async fn handler(
         .await
         .unwrap();
 
-    let items = ads
+    let items:Vec<_> = ads
         .into_iter()
         .map(|x| PartialAdvertisement {
             title: x.title,
             end_at: x.end_at,
         })
         .collect();
+
+    if items.is_empty(){
+        return Err(StatusCode::NOT_FOUND);
+    }
 
     Ok(Json(PartialAdvertisements { items }))
 }
