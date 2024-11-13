@@ -13,7 +13,7 @@ bb8 = "0.8.6"
 
 [dependencies.chrono]
 workspace = true
-features = ["serde"]
+features = ["serde", "std"]
 
 [dependencies.serde]
 workspace = true

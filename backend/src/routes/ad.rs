@@ -31,8 +31,8 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Json(params): Json<Params>,
 ) -> Result<Json<PartialAdvertisements>, StatusCode> {
-    if(params.limit==0){
-        return Ok(Json(PartialAdvertisements::default()))
+    if (params.limit == 0) {
+        return Ok(Json(PartialAdvertisements::default()));
     }
 
     // TODO!: add log

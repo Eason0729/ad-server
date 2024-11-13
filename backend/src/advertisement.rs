@@ -5,12 +5,13 @@ use bb8_postgres::bb8::{Pool, PooledConnection};
 use bb8_postgres::PostgresConnectionManager;
 use chrono::NaiveDateTime;
 use common::{Country, Platform};
-use std::fmt::format;
+use std::time::SystemTime;
 use tokio_postgres::types::ToSql;
-use tokio_postgres::{Client, NoTls};
+use tokio_postgres::types::Type;
+use tokio_postgres::{Client, GenericClient, NoTls};
 
 pub type Manager = PostgresConnectionManager<NoTls>;
-const TIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
+pub const TIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 pub struct Config {
     pub host: String,
     pub port: u16,
@@ -62,14 +63,15 @@ impl PreparedClient {
                 &self.queries.insert_stmt,
                 &[
                     &advertisement.title,
-                    &format!("int8range({},{})",advertisement.age_range.0, advertisement.age_range.1),
+                    &(advertisement.age_range.0),
+                    &(advertisement.age_range.1),
                     &advertisement
                         .country
                         .clone()
-                        .map(Country::into_id)
+                        .map(|x| x.into_id() as i32)
                         .unwrap_or_default(),
-                    &advertisement.platform.map(|p| p as u32).unwrap_or_default(),
-                    &advertisement.end_at.format(TIME_FORMAT).to_string(),
+                    &advertisement.platform.map(|p| p as i32).unwrap_or_default(),
+                    &SystemTime::from(advertisement.end_at.and_utc()),
                 ],
             )
             .await?;
@@ -156,7 +158,22 @@ struct Queries {
 impl Queries {
     pub async fn new(pool: &Pool<Manager>) -> Result<Self, tokio_postgres::Error> {
         let conn = pool.get().await.expect("Failed to get connection");
-        let insert_stmt = conn.prepare("INSERT INTO advertisement (title, age_range, country, platform, end_at) VALUES ($1, $2, $3, $4, $5)").await?;
+        let insert_stmt = conn
+            .prepare_typed(
+                r#"
+            INSERT INTO advertisement (title, age_range, country, platform, end_at)
+            VALUES ($1, Int4Range($2, $3), $4, $5, $6);
+        "#,
+                &[
+                    Type::TEXT,
+                    Type::INT4,
+                    Type::INT4,
+                    Type::INT4,
+                    Type::INT4,
+                    Type::TIMESTAMP,
+                ],
+            )
+            .await?;
         let mut query_stmt = std::array::from_fn(|_| None);
         for i in 0..1 << 4 {
             let mut query = "SELECT id, title, end_at FROM advertisement".to_string();
