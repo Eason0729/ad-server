@@ -2,8 +2,6 @@ name: Publish staging build for backend
 
 on:
   push:
-    branches:
-      - "staging"
     paths:
       - "backend/**"
       - .github/workflows/backend.yml
