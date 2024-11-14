@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ad-server
+  labels:
+    app: ad-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ad-server
+  template:
+    metadata:
+      name: ad-server
+      labels:
+        app: ad-server
+    spec:
+      containers:
+        - name: ad-server
+          image: ad-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: web
+              protocol: TCP
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ad-server
+  labels:
+    app: ad-server
+spec:
+  selector:
+    app: ad-server
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: LoadBalancer
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ad-server
+spec:
+  rules:
+    - host: ad-server.local

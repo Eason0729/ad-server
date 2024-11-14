@@ -1,14 +1,8 @@
 # https://www.enterprisedb.com/blog/Trying-Out-CloudNative-PG-Novice-Kubernetes-World
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: postgres
----
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: postgres
-  namespace: postgres
 spec:
   instances: 2
   storage:

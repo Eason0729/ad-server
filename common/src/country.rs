@@ -1,7 +1,7 @@
 use isocountry::CountryCode;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Country(CountryCode);
 
 impl Country {

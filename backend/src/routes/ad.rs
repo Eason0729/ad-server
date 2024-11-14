@@ -5,11 +5,15 @@ use common::{Country, Gender, Platform};
 use serde::Serialize;
 use std::sync::Arc;
 
-#[derive(serde::Deserialize)]
+fn default_limit() -> usize {
+    1
+}
+
+#[derive(serde::Deserialize, Debug)]
 pub struct Params {
     #[serde(default)]
     offset: usize,
-    #[serde(default)]
+    #[serde(default = "default_limit")]
     limit: usize,
     #[serde(default)]
     age: Option<i32>,
@@ -53,7 +57,7 @@ pub async fn handler(
         .await
         .unwrap();
 
-    let items:Vec<_> = ads
+    let items: Vec<_> = ads
         .into_iter()
         .map(|x| PartialAdvertisement {
             title: x.title,
@@ -61,7 +65,7 @@ pub async fn handler(
         })
         .collect();
 
-    if items.is_empty(){
+    if items.is_empty() {
         return Err(StatusCode::NOT_FOUND);
     }
 

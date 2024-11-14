@@ -1,5 +1,5 @@
 use crate::database::Connection;
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Local, NaiveDateTime};
 use common::{Country, Platform};
 use std::time::SystemTime;
 use tokio_postgres::types::{ToSql, Type};
@@ -35,18 +35,22 @@ impl Queries {
         for i in 0..1 << 4 {
             let mut query = "SELECT id, title, end_at FROM advertisement".to_string();
             let mut filters = Vec::new();
+            let mut types = Vec::new();
             let mut n = 1;
 
             if i & 1 != 0 {
                 filters.push(format!("country = ${}", n));
+                types.push(Type::INT4);
                 n += 1;
             }
             if i & 2 != 0 {
                 filters.push(format!("platform = ${}", n));
+                types.push(Type::INT4);
                 n += 1;
             }
             if i & 4 != 0 {
-                filters.push(format!("age_range @> ${}", n));
+                filters.push(format!("${} <@ age_range", n));
+                types.push(Type::INT4);
                 n += 1;
             }
             if i & 8 != 0 {
@@ -56,8 +60,10 @@ impl Queries {
                 query.push_str(" WHERE ");
                 query.push_str(&filters.join(" AND "));
             }
+            types.push(Type::INT8);
+            types.push(Type::INT8);
             query.push_str(format!(" ORDER BY id LIMIT ${} OFFSET ${}", n, n + 1).as_str());
-            query_stmt[i] = Some(read_conn.prepare(&query).await?);
+            query_stmt[i] = Some(read_conn.prepare_typed(&query, &types).await?);
         }
         let query_stmt = query_stmt.map(|stmt| stmt.unwrap());
         Ok(Queries {
@@ -151,20 +157,20 @@ impl Queries {
 
         let platform;
         if let Some(x) = cond.platform {
-            platform = x as i64;
+            platform = x as i32;
             params.push(&platform);
         }
 
         let age;
         if let Some(x) = cond.age {
-            age = x as i64;
+            age = x;
             params.push(&age);
         }
 
-        let offset = &(offset as i64);
         let limit = &(limit as i64);
-        params.push(offset);
+        let offset = &(offset as i64);
         params.push(limit);
+        params.push(offset);
 
         let rows = read.query(stmt, &params).await?;
         Ok(rows
@@ -172,7 +178,7 @@ impl Queries {
             .map(|row| PartialAdvertisement {
                 id: row.get(0),
                 title: row.get(1),
-                end_at: NaiveDateTime::parse_from_str(row.get(2), TIME_FORMAT).unwrap(),
+                end_at: DateTime::<Local>::from(row.get::<_, SystemTime>(2)).naive_utc(),
             })
             .collect())
     }

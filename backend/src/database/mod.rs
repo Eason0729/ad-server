@@ -1,6 +1,7 @@
 use crate::database::read_write::Config;
 use bb8::PooledConnection;
 use bb8_postgres::PostgresConnectionManager;
+use std::env;
 use tokio_postgres::NoTls;
 
 pub mod advertisement;
@@ -19,10 +20,15 @@ pub struct Client {
 
 impl Client {
     pub async fn new() -> Self {
-        let inner_client =
-            read_write::Client::new_with_config(Config::default(), Config::default())
-                .await
-                .unwrap();
+        let read_host = env::var("READ_HOST").unwrap_or("localhost".to_string());
+        let write_host = env::var("WRITE_HOST").unwrap_or("localhost".to_string());
+
+        let inner_client = read_write::Client::new_with_config(
+            Config::default().with_host(read_host),
+            Config::default().with_host(write_host),
+        )
+        .await
+        .unwrap();
         let queries =
             advertisement::Queries::new(&inner_client.read().await, &inner_client.write().await)
                 .await
