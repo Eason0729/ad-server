@@ -2,8 +2,6 @@ name: Publish staging build for backend
 
 on:
   push:
-    branches:
-      - "staging"
     paths:
       - "backend/**"
       - .github/workflows/backend.yml
@@ -36,5 +34,5 @@ jobs:
           context: .
           file: "./backend/Dockerfile"
           push: true
-          tags: "ghcr.io/Eason0729/ad-server/backend:staging"
+          tags: "ghcr.io/eason0729/ad-server/backend:staging"
           labels: "backend"
