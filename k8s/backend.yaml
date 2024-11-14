@@ -55,7 +55,7 @@ kind: Ingress
 metadata:
   name: ad-server
   annotations:
-    kubernetes.io/ingress.class: public
+    spec.ingressClassName: public
 spec:
   rules:
     - host: ad-server.local

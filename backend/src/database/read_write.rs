@@ -18,9 +18,9 @@ impl Default for Config {
         Config {
             host: "localhost".to_string(),
             port: 5432,
-            user: "postgres".to_string(),
+            user: "eason".to_string(),
             password: "postgres".to_string(),
-            db: "postgres".to_string(),
+            db: "ad-server".to_string(),
         }
     }
 }

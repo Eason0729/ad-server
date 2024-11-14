@@ -8,5 +8,6 @@ spec:
     size: 4Gi
   bootstrap:
     initdb:
-      database: postgres
-      owner: postgres
+      database: ad-server
+      owner: eason
+      
