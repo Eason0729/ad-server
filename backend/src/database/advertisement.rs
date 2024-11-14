@@ -131,7 +131,7 @@ impl Queries {
 
         let country;
         if let Some(x) = cond.country {
-            country = x.into_id() as i64;
+            country = x.into_id() as i32;
             params.push(&country);
         }
 
