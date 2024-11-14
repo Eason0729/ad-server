@@ -4,6 +4,8 @@ metadata:
   name: ad-server
   labels:
     app: ad-server
+  annotations:
+    sidecar.opentelemetry.io/inject: "true"
 spec:
   replicas: 1
   selector:
@@ -20,9 +22,11 @@ spec:
           image: ghcr.io/eason0729/ad-server/backend:staging
           imagePullPolicy: IfNotPresent
           env:
+          - name: OTEL_TRACES_SAMPLER
+            value: "0.05"
           - name: READ_HOST
             value: postgres-ro.default.svc.cluster.local
-          - name: WRITE_HIST
+          - name: WRITE_HOST
             value: postgres-rw.default.svc.cluster.local
           - name: PASSWORD
             valueFrom:
@@ -33,7 +37,29 @@ spec:
             - containerPort: 3000
               name: web
               protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              scheme: HTTP
+              port: 3000
+            initialDelaySeconds: 3
+            periodSeconds: 60
+            successThreshold: 2
+            failureThreshold: 5
       restartPolicy: Always
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ad-server
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ad-server
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 40
 ---
 apiVersion: v1
 kind: Service

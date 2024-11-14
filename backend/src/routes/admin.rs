@@ -4,7 +4,7 @@ use common::{Country, Gender, Platform};
 use serde::Deserialize;
 use std::sync::Arc;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Advertisement {
     title: String,
     from_age: i32,
@@ -27,13 +27,14 @@ impl From<Advertisement> for AdvertisementModel {
     }
 }
 
-#[axum::debug_handler]
+#[tracing::instrument(name = "POST /ad", skip(state))]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Json(params): Json<Advertisement>,
 ) -> Result<(), StatusCode> {
-    // TODO!: add log
-    state.client.insert(&params.into()).await.unwrap();
+    if let Err(err) = state.client.insert(&params.into()).await {
+        tracing::error!("failed to insert advertisement: {:?}", err);
+    }
 
     Ok(())
 }

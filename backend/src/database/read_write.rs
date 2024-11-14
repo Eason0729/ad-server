@@ -72,9 +72,11 @@ impl Client {
         })
     }
     pub async fn read(&self) -> Connection {
+        tracing::info!(counter.database.read = 1);
         self.read_pool.get().await.expect(POOL_EXHAUSTED_MSG)
     }
     pub async fn write(&self) -> Connection {
+        tracing::info!(counter.database.write = 1);
         self.write_pool.get().await.expect(POOL_EXHAUSTED_MSG)
     }
 }

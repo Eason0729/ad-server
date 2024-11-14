@@ -1,9 +1,11 @@
 use crate::{database::*, routes::AppState};
+use axum::extract::Query;
 use axum::{extract::State, http::StatusCode, Json};
 use chrono::NaiveDateTime;
 use common::{Country, Gender, Platform};
 use serde::Serialize;
 use std::sync::Arc;
+use tracing::instrument;
 
 fn default_limit() -> usize {
     1
@@ -35,16 +37,16 @@ pub struct PartialAdvertisements {
     items: Vec<PartialAdvertisement>,
 }
 
+#[instrument(name = "GET /ad", skip(state, params))]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
-    Json(params): Json<Params>,
+    Query(params): Query<Params>,
 ) -> Result<Json<PartialAdvertisements>, StatusCode> {
     if params.limit == 0 {
         return Ok(Json(PartialAdvertisements::default()));
     }
 
-    // TODO!: add log
-    let ads = state
+    let ads = match state
         .client
         .query_partial(
             Condition {
@@ -55,7 +57,13 @@ pub async fn handler(
             (params.limit, params.offset),
         )
         .await
-        .unwrap();
+    {
+        Ok(ads) => ads,
+        Err(err) => {
+            tracing::error!("failed to query partial advertisements: {:?}", err);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
     let items: Vec<_> = ads
         .into_iter()

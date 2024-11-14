@@ -10,6 +10,21 @@ axum = { workspace = true, features = ["macros"]}
 tokio-postgres = "0.7.12"
 bb8-postgres = "0.8.1"
 bb8 = "0.8.6"
+opentelemetry = { version = "0.27.0", features = ["metrics"] }
+opentelemetry_sdk = { version = "0.27.0", features = ["rt-tokio", "metrics"] }
+opentelemetry-stdout = { version = "0.27.0", features = ["metrics"] }
+opentelemetry-otlp = { version = "0.27.0", features = ["metrics", "tls-roots"] }
+opentelemetry-semantic-conventions = { version = "0.27.0", features = ["semconv_experimental"] }
+tracing-opentelemetry = { version = "0.28.0", features = ["metrics"] }
+tracing-core = "0.1.32"
+
+[dependencies.tracing-subscriber]
+version  = "0.3.17"
+features = ["json"]
+
+[dependencies.tracing]
+version = "0.1.40"
+features = ["async-await", "log", "release_max_level_debug"]
 
 [dependencies.chrono]
 workspace = true

@@ -25,7 +25,7 @@ impl AppState {
 pub async fn get_router() -> Router {
     Router::new()
         .route("/health", routing::get(health::handler))
-        .route("/ads", routing::post(ad::handler))
+        .route("/ad", routing::get(ad::handler))
         .route("/ad", routing::post(admin::handler))
         .with_state(AppState::shared().await)
 }

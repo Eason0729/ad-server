@@ -91,26 +91,6 @@ impl Queries {
     }
 }
 
-pub struct Config {
-    pub host: String,
-    pub port: u16,
-    pub user: String,
-    pub password: String,
-    pub db: String,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            host: "localhost".to_string(),
-            port: 5432,
-            user: "postgres".to_string(),
-            password: "postgres".to_string(),
-            db: "postgres".to_string(),
-        }
-    }
-}
-
 impl Queries {
     pub async fn insert(
         &self,
