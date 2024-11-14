@@ -16,6 +16,7 @@ impl Queries {
         read_conn: &Connection<'_>,
         write_conn: &Connection<'_>,
     ) -> Result<Self, tokio_postgres::Error> {
+        tracing::info!("prepare insert statement");
         let insert_stmt = write_conn
             .prepare_typed(
                 r#"INSERT INTO advertisement (title, age_range, country, platform, end_at)
@@ -31,6 +32,7 @@ impl Queries {
             )
             .await?;
 
+        println!("prepare query statement");
         let mut query_stmt = std::array::from_fn(|_| None);
         for i in 0..1 << 4 {
             let mut query = "SELECT id, title, end_at FROM advertisement".to_string();
