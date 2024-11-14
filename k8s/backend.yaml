@@ -17,8 +17,18 @@ spec:
     spec:
       containers:
         - name: ad-server
-          image: ad-server:latest
+          image: ghcr.io/eason0729/ad-server/backend:staging
           imagePullPolicy: IfNotPresent
+          env:
+          - name: READ_HOST
+            value: postgres-ro.default.svc.cluster.local
+          - name: WRITE_HIST
+            value: postgres-rw.default.svc.cluster.local
+          - name: PASSWORD
+            valueFrom:
+              secretKeyRef: 
+                name: postgres-app
+                key: password
           ports:
             - containerPort: 3000
               name: web
@@ -44,6 +54,17 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: ad-server
+  annotations:
+    kubernetes.io/ingress.class: public
 spec:
   rules:
     - host: ad-server.local
+      http:
+        paths:
+        - pathType: Prefix
+          path: "/"
+          backend:
+            service:
+              name: ad-server
+              port:
+                number: 3000

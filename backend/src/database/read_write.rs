@@ -35,6 +35,10 @@ impl Config {
         self.host = host.as_ref().to_string();
         self
     }
+    pub fn with_password(mut self, password: impl AsRef<str>) -> Self {
+        self.password = password.as_ref().to_string();
+        self
+    }
 }
 
 /// connection pool

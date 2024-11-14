@@ -22,10 +22,15 @@ impl Client {
     pub async fn new() -> Self {
         let read_host = env::var("READ_HOST").unwrap_or("localhost".to_string());
         let write_host = env::var("WRITE_HOST").unwrap_or("localhost".to_string());
+        let password = env::var("PASSWORD").expect("PASSWORD must be set");
 
         let inner_client = read_write::Client::new_with_config(
-            Config::default().with_host(read_host),
-            Config::default().with_host(write_host),
+            Config::default()
+                .with_host(read_host)
+                .with_password(password.clone()),
+            Config::default()
+                .with_host(write_host)
+                .with_password(password),
         )
         .await
         .unwrap();

@@ -1,4 +1,3 @@
-# https://www.enterprisedb.com/blog/Trying-Out-CloudNative-PG-Novice-Kubernetes-World
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
