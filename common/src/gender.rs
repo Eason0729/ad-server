@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Default, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone, Hash, Eq, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum Gender {
     #[default]

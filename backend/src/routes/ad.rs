@@ -3,15 +3,53 @@ use axum::extract::Query;
 use axum::{extract::State, http::StatusCode, Json};
 use chrono::NaiveDateTime;
 use common::{Country, Gender, Platform};
+use quick_cache::sync::Cache;
 use serde::Serialize;
+use std::future::Future;
 use std::sync::Arc;
+use quick_cache::Weighter;
 use tracing::instrument;
+
+
+#[derive(Clone)]
+struct VecWeighter;
+
+impl Weighter<Params, Vec<PartialAdvertisement>> for VecWeighter{
+    fn weight(&self, _: &Params, val: &Vec<PartialAdvertisement>) -> u64 {
+        val.len() as u64
+    }
+}
+
+pub struct ReadCache(Cache<Params, Vec<PartialAdvertisement>, VecWeighter>);
+
+impl ReadCache {
+    pub fn new() -> Self {
+        Self(Cache::with_weighter(64, 512, VecWeighter))
+    }
+    async fn get_or_insert_async<E, F, Fut>(
+        &self,
+        key: Params,
+        f: F,
+    ) -> Result<Vec<PartialAdvertisement>, E>
+    where
+        F: FnOnce(Params) -> Fut,
+        Fut: Future<Output = Result<Vec<PartialAdvertisement>, E>>,
+    {
+        if let Some(items) = self.0.get(&key) {
+            return Ok(items);
+        }
+        f(key.clone()).await.map(|items| {
+            self.0.insert(key, items.clone());
+            items
+        })
+    }
+}
 
 fn default_limit() -> usize {
     1
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Params {
     #[serde(default)]
     offset: usize,
@@ -27,12 +65,12 @@ pub struct Params {
     gender: Option<Gender>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct PartialAdvertisement {
     title: String,
     end_at: NaiveDateTime,
 }
-#[derive(Serialize, Default)]
+#[derive(Serialize, Default, Clone)]
 pub struct PartialAdvertisements {
     items: Vec<PartialAdvertisement>,
 }
@@ -46,32 +84,38 @@ pub async fn handler(
         return Ok(Json(PartialAdvertisements::default()));
     }
 
-    let ads = match state
-        .client
-        .query_partial(
-            Condition {
-                age: params.age,
-                country: params.country,
-                platform: params.platform,
-            },
-            (params.limit, params.offset),
-        )
-        .await
-    {
+    let client = &state.client;
+    let items: Result<_, tokio_postgres::Error> = state
+        .read_cache
+        .get_or_insert_async(params, move |params| async move {
+            let ads = client
+                .query_partial(
+                    Condition {
+                        age: params.age,
+                        country: params.country,
+                        platform: params.platform,
+                    },
+                    (params.limit, params.offset),
+                )
+                .await?;
+
+            Ok(ads
+                .into_iter()
+                .map(|x| PartialAdvertisement {
+                    title: x.title,
+                    end_at: x.end_at,
+                })
+                .collect())
+        })
+        .await;
+
+    let items = match items {
         Ok(ads) => ads,
         Err(err) => {
             tracing::error!("failed to query partial advertisements: {:?}", err);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
-
-    let items: Vec<_> = ads
-        .into_iter()
-        .map(|x| PartialAdvertisement {
-            title: x.title,
-            end_at: x.end_at,
-        })
-        .collect();
 
     if items.is_empty() {
         return Err(StatusCode::NOT_FOUND);
