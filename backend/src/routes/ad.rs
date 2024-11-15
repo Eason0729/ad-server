@@ -8,6 +8,7 @@ use serde::Serialize;
 use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio_postgres::error::SqlState;
 use tracing::instrument;
 
 pub struct ReadCache(Cache<Params, Vec<PartialAdvertisement>>);
@@ -106,13 +107,13 @@ pub async fn handler(
         Ok(ads) => ads,
         Err(err) => {
             tracing::error!("failed to query partial advertisements: {:?}", err);
+            let code = SqlState::from_code("26000");
+            if err.code()==Some(&code){
+                std::process::exit(1);
+            }
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
-
-    if items.is_empty() {
-        return Err(StatusCode::NOT_FOUND);
-    }
 
     Ok(Json(PartialAdvertisements { items }))
 }
