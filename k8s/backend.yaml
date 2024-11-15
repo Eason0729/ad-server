@@ -22,7 +22,7 @@ spec:
       containers:
         - name: ad-server
           image: ghcr.io/eason0729/ad-server/backend:staging
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always # IfNotPresent
           env:
           - name: OTEL_TRACES_SAMPLER
             value: "0.05"
@@ -68,15 +68,15 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: ad-server
-  minReplicas: 2
-  maxReplicas: 6
+  minReplicas: 1
+  maxReplicas: 10
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 55
+          averageUtilization: 45
     - type: Resource
       resource:
         name: memory

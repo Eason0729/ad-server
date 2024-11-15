@@ -59,7 +59,7 @@ impl Queries {
                 filters.push("end_at > now()".to_string());
             }
             if i & 16 != 0 {
-                filters.push(format!("${} = gender", n));
+                filters.push(format!("${} = c", n));
                 types.push(Type::INT4);
                 n += 1;
             }

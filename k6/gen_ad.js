@@ -4,14 +4,15 @@ import {
 } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import http from "k6/http";
 import { sleep } from "k6";
+import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 
 export const options = {
   scenarios: {
     contacts: {
       executor: "ramping-vus",
-      startVUs: 10,
+      startVUs: 100,
       stages: [
-        { target: 100, duration: "10s" },
+        { target: 200, duration: "10s" },
       ],
     },
   },
@@ -70,28 +71,28 @@ const genders = ["male", "female"];
 const countries = ["US", "TW", "GB", "AU", "FR", "DE"];
 const platforms = ["android", "ios", "web", "desktop", "smarttv"];
 export default function () {
-  const title = "t";
+  const title = randomString(16, "aeioubcdfghijpqrstuv");
   const from_age = randomIntBetween(1, 10);
   const to_age = from_age + randomIntBetween(1, 95);
   const gender = randomItem(genders);
   const country = randomItem(countries);
   const platform = randomItem(platforms);
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 25; i++) {
     http.post(
-        `http://ad-server.local/ad`,
-        JSON.stringify({
-          title,
-          country,
-          to_age,
-          from_age,
-          gender,
-          platform,
-          end_at: "2026-08-15T17:41:18.106108",
-        }),
-        {
-          headers: { "Content-Type": "application/json" },
-        },
+      `http://ad-server.local/ad`,
+      JSON.stringify({
+        title,
+        country,
+        to_age,
+        from_age,
+        gender,
+        platform,
+        end_at: "2026-08-15T17:41:18.106108",
+      }),
+      {
+        headers: { "Content-Type": "application/json" },
+      },
     );
   }
 
