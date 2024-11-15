@@ -87,7 +87,7 @@ pub async fn handler(
                         age: params.age,
                         country: params.country,
                         platform: params.platform,
-                        gender: params.gender
+                        gender: params.gender,
                     },
                     (params.limit, params.offset),
                 )
@@ -108,7 +108,7 @@ pub async fn handler(
         Err(err) => {
             tracing::error!("failed to query partial advertisements: {:?}", err);
             let code = SqlState::from_code("26000");
-            if err.code()==Some(&code){
+            if err.code() == Some(&code) {
                 std::process::exit(1);
             }
             return Err(StatusCode::INTERNAL_SERVER_ERROR);

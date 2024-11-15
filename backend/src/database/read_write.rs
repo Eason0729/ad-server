@@ -1,7 +1,8 @@
 use crate::database::{Connection, Manager};
 use bb8::Pool;
 use bb8_postgres::PostgresConnectionManager;
-use tokio_postgres::NoTls;
+use tokio_postgres::types::{ToSql, Type};
+use tokio_postgres::{NoTls, Row};
 
 static POOL_EXHAUSTED_MSG: &str = "cannot found/add new connection to pool";
 
@@ -78,5 +79,30 @@ impl Client {
     pub async fn write(&self) -> Connection {
         tracing::info!(counter.database.write = 1);
         self.write_pool.get().await.expect(POOL_EXHAUSTED_MSG)
+    }
+}
+
+pub struct TypedReadStatement {
+    raw: String,
+    types: Vec<Type>,
+}
+
+impl TypedReadStatement {
+    pub fn new(raw: impl AsRef<str>, types: impl Iterator<Item = Type>) -> Self {
+        TypedReadStatement {
+            raw: raw.as_ref().to_string(),
+            types: types.collect(),
+        }
+    }
+    pub async fn query<'a>(
+        &self,
+        conn: &Connection<'a>,
+        param: impl Iterator<Item = &(dyn ToSql + Sync)>,
+    ) -> Result<Vec<Row>, tokio_postgres::Error> {
+        let param = param
+            .map(|x| x as &(dyn ToSql + Sync))
+            .zip(self.types.clone().into_iter())
+            .collect::<Vec<_>>();
+        conn.query_typed(self.raw.as_ref(), &param).await
     }
 }

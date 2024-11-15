@@ -3,10 +3,8 @@ kind: Cluster
 metadata:
   name: postgres
 spec:
-  instances: 3
+  instances: 4
   replicationSlots:
-    highAvailability:
-      enabled: true
     updateInterval: 60
   storage:
     size: 4Gi

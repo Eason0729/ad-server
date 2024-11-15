@@ -1,3 +1,4 @@
+use crate::database::read_write::TypedReadStatement;
 use crate::database::Connection;
 use chrono::{DateTime, Local, NaiveDateTime};
 use common::{Country, Gender, Platform};
@@ -6,12 +7,12 @@ use tokio_postgres::types::{ToSql, Type};
 
 pub(crate) struct Queries {
     insert_stmt: tokio_postgres::Statement,
-    query_stmt: [tokio_postgres::Statement; 1 << 5],
+    query_stmt: [TypedReadStatement; 1 << 5],
 }
 
 impl Queries {
     pub async fn new(
-        read_conn: &Connection<'_>,
+        _: &Connection<'_>,
         write_conn: &Connection<'_>,
     ) -> Result<Self, tokio_postgres::Error> {
         tracing::info!("prepare insert statement");
@@ -70,7 +71,7 @@ impl Queries {
             types.push(Type::INT8);
             types.push(Type::INT8);
             query.push_str(format!(" ORDER BY id LIMIT ${} OFFSET ${}", n, n + 1).as_str());
-            query_stmt[i] = Some(read_conn.prepare_typed(&query, &types).await?);
+            query_stmt[i] = Some(TypedReadStatement::new(query, types.into_iter()));
         }
         let query_stmt = query_stmt.map(|stmt| stmt.unwrap());
         Ok(Queries {
@@ -83,8 +84,8 @@ impl Queries {
         country: bool,
         platform: bool,
         age: bool,
-        gender: bool
-    ) -> &tokio_postgres::Statement {
+        gender: bool,
+    ) -> &TypedReadStatement {
         let mut idx = 0;
         if country {
             idx |= 1;
@@ -138,7 +139,7 @@ impl Queries {
             cond.country.is_some(),
             cond.platform.is_some(),
             cond.age.is_some(),
-            cond.gender.is_some()
+            cond.gender.is_some(),
         );
         let mut params: Vec<&(dyn ToSql + Sync)> = Vec::new();
 
@@ -161,8 +162,8 @@ impl Queries {
         }
 
         let gender;
-        if let Some(x)= cond.gender{
-            gender= x as i32;
+        if let Some(x) = cond.gender {
+            gender = x as i32;
             params.push(&gender);
         }
 
@@ -171,7 +172,8 @@ impl Queries {
         params.push(limit);
         params.push(offset);
 
-        let rows = read.query(stmt, &params).await?;
+        let rows = stmt.query(&read, params.into_iter()).await?;
+
         Ok(rows
             .iter()
             .map(|row| PartialAdvertisement {
@@ -202,5 +204,5 @@ pub struct Condition {
     pub age: Option<i32>,
     pub country: Option<Country>,
     pub platform: Option<Platform>,
-    pub gender: Option<Gender>
+    pub gender: Option<Gender>,
 }
