@@ -3,45 +3,36 @@ use axum::extract::Query;
 use axum::{extract::State, http::StatusCode, Json};
 use chrono::NaiveDateTime;
 use common::{Country, Gender, Platform};
-use quick_cache::sync::Cache;
+use moka::future::Cache;
 use serde::Serialize;
 use std::future::Future;
 use std::sync::Arc;
-use quick_cache::Weighter;
+use std::time::Duration;
 use tracing::instrument;
 
-
-#[derive(Clone)]
-struct VecWeighter;
-
-impl Weighter<Params, Vec<PartialAdvertisement>> for VecWeighter{
-    fn weight(&self, _: &Params, val: &Vec<PartialAdvertisement>) -> u64 {
-        val.len() as u64
-    }
-}
-
-pub struct ReadCache(Cache<Params, Vec<PartialAdvertisement>, VecWeighter>);
+pub struct ReadCache(Cache<Params, Vec<PartialAdvertisement>>);
 
 impl ReadCache {
     pub fn new() -> Self {
-        Self(Cache::with_weighter(64, 512, VecWeighter))
+        Self(
+            Cache::builder()
+                .weigher(|_, val: &Vec<PartialAdvertisement>| val.len() as u32)
+                .time_to_live(Duration::new(60, 0))
+                .max_capacity(131072)
+                .build(),
+        )
     }
     async fn get_or_insert_async<E, F, Fut>(
         &self,
         key: Params,
         f: F,
-    ) -> Result<Vec<PartialAdvertisement>, E>
+    ) -> Result<Vec<PartialAdvertisement>, Arc<E>>
     where
         F: FnOnce(Params) -> Fut,
         Fut: Future<Output = Result<Vec<PartialAdvertisement>, E>>,
+        E: Send + Sync + 'static,
     {
-        if let Some(items) = self.0.get(&key) {
-            return Ok(items);
-        }
-        f(key.clone()).await.map(|items| {
-            self.0.insert(key, items.clone());
-            items
-        })
+        self.0.try_get_with(key.clone(), f(key)).await
     }
 }
 
@@ -50,6 +41,7 @@ fn default_limit() -> usize {
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct Params {
     #[serde(default)]
     offset: usize,
@@ -85,7 +77,7 @@ pub async fn handler(
     }
 
     let client = &state.client;
-    let items: Result<_, tokio_postgres::Error> = state
+    let items: Result<_, Arc<tokio_postgres::Error>> = state
         .read_cache
         .get_or_insert_async(params, move |params| async move {
             let ads = client
@@ -94,6 +86,7 @@ pub async fn handler(
                         age: params.age,
                         country: params.country,
                         platform: params.platform,
+                        gender: params.gender
                     },
                     (params.limit, params.offset),
                 )

@@ -1,14 +1,12 @@
 use crate::database::Connection;
 use chrono::{DateTime, Local, NaiveDateTime};
-use common::{Country, Platform};
+use common::{Country, Gender, Platform};
 use std::time::SystemTime;
 use tokio_postgres::types::{ToSql, Type};
 
-pub const TIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
-
 pub(crate) struct Queries {
     insert_stmt: tokio_postgres::Statement,
-    query_stmt: [tokio_postgres::Statement; 1 << 4],
+    query_stmt: [tokio_postgres::Statement; 1 << 5],
 }
 
 impl Queries {
@@ -19,10 +17,11 @@ impl Queries {
         tracing::info!("prepare insert statement");
         let insert_stmt = write_conn
             .prepare_typed(
-                r#"INSERT INTO advertisement (title, age_range, country, platform, end_at)
-                VALUES ($1, Int4Range($2, $3), $4, $5, $6);"#,
+                r#"INSERT INTO advertisement (title, age_range, country, platform, gender, end_at)
+                VALUES ($1, Int4Range($2, $3), $4,$5, $6, $7);"#,
                 &[
                     Type::TEXT,
+                    Type::INT4,
                     Type::INT4,
                     Type::INT4,
                     Type::INT4,
@@ -34,7 +33,7 @@ impl Queries {
 
         println!("prepare query statement");
         let mut query_stmt = std::array::from_fn(|_| None);
-        for i in 0..1 << 4 {
+        for i in 0..1 << 5 {
             let mut query = "SELECT id, title, end_at FROM advertisement".to_string();
             let mut filters = Vec::new();
             let mut types = Vec::new();
@@ -58,6 +57,12 @@ impl Queries {
             if i & 8 != 0 {
                 filters.push("end_at > now()".to_string());
             }
+            if i & 16 != 0 {
+                filters.push(format!("${} = gender", n));
+                types.push(Type::INT4);
+                n += 1;
+            }
+
             if !filters.is_empty() {
                 query.push_str(" WHERE ");
                 query.push_str(&filters.join(" AND "));
@@ -78,6 +83,7 @@ impl Queries {
         country: bool,
         platform: bool,
         age: bool,
+        gender: bool
     ) -> &tokio_postgres::Statement {
         let mut idx = 0;
         if country {
@@ -88,6 +94,9 @@ impl Queries {
         }
         if age {
             idx |= 1 << 2;
+        }
+        if gender {
+            idx |= 1 << 4;
         }
         &self.query_stmt[idx]
     }
@@ -111,7 +120,8 @@ impl Queries {
                         .clone()
                         .map(|x| x.into_id() as i32)
                         .unwrap_or_default(),
-                    &advertisement.platform.map(|p| p as i32).unwrap_or_default(),
+                    &advertisement.platform.clone().map(|p| p as i32),
+                    &advertisement.gender.clone().map(|g| g as i32),
                     &SystemTime::from(advertisement.end_at.and_utc()),
                 ],
             )
@@ -128,6 +138,7 @@ impl Queries {
             cond.country.is_some(),
             cond.platform.is_some(),
             cond.age.is_some(),
+            cond.gender.is_some()
         );
         let mut params: Vec<&(dyn ToSql + Sync)> = Vec::new();
 
@@ -147,6 +158,12 @@ impl Queries {
         if let Some(x) = cond.age {
             age = x;
             params.push(&age);
+        }
+
+        let gender;
+        if let Some(x)= cond.gender{
+            gender= x as i32;
+            params.push(&gender);
         }
 
         let limit = &(limit as i64);
@@ -171,6 +188,7 @@ pub struct Advertisement {
     pub age_range: (i32, i32), // int4range
     pub country: Option<Country>,
     pub platform: Option<Platform>,
+    pub gender: Option<Gender>,
     pub end_at: NaiveDateTime,
 }
 
@@ -184,4 +202,5 @@ pub struct Condition {
     pub age: Option<i32>,
     pub country: Option<Country>,
     pub platform: Option<Platform>,
+    pub gender: Option<Gender>
 }

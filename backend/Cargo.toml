@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-quick_cache = "0.6.9"
 common = { path = "../common" }
 axum = { workspace = true, features = ["macros"]}
 tokio-postgres = "0.7.12"
@@ -17,6 +16,7 @@ opentelemetry-otlp = { version = "0.27.0", features = ["metrics", "tls-roots"] }
 opentelemetry-semantic-conventions = { version = "0.27.0", features = ["semconv_experimental"] }
 tracing-opentelemetry = { version = "0.28.0", features = ["metrics"] }
 tracing-core = "0.1.32"
+moka = { version = "0.12.8", features = ["future"] }
 
 [dependencies.tracing-subscriber]
 version  = "0.3.17"

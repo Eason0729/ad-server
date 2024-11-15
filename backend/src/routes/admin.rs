@@ -5,6 +5,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Advertisement {
     title: String,
     from_age: i32,
@@ -22,6 +23,7 @@ impl From<Advertisement> for AdvertisementModel {
             age_range: (value.from_age, value.to_age),
             country: value.country,
             platform: value.platform,
+            gender: value.gender,
             end_at: value.end_at,
         }
     }
